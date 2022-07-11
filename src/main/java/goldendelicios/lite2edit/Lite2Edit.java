@@ -25,7 +25,7 @@ public class Lite2Edit {
 		frame.setLocationRelativeTo(null);
 		
 		JPanel panel = new JPanel();
-		JLabel label = new JLabel("Pick a Litematic file");
+		JLabel label = new JLabel("Pick a Litematic file or a few");
 		
 		JTextArea textArea = new JTextArea(6, 0);
 		textArea.setEditable(false);
@@ -47,32 +47,36 @@ public class Lite2Edit {
 		return event -> {
 			String dir = System.getProperty("user.dir");
 			JFileChooser fc = new JFileChooser(dir);
+			fc.setMultiSelectionEnabled(true);
 			fc.setFileFilter(new LitematicFileFilter());
 			
 			int value = fc.showOpenDialog(browse);
 			if (value == JFileChooser.APPROVE_OPTION) {
-				File file = fc.getSelectedFile();
+				File[] filez = fc.getSelectedFiles();
 				String text = "";
-				try {
-					File parent = file.getParentFile();
-					List<File> files = Converter.litematicToWorldEdit(file, parent);
-					
-					if (files.isEmpty()) {
-						text = "Not a valid litematic file";
-					}
-					else {
-						for (File output : files) {
-							text += "Exported to " + output.getName() + "\n";
+				for (File file: filez)
+				{
+					try {
+						File parent = file.getParentFile();
+						List<File> files = Converter.litematicToWorldEdit(file, parent);
+						
+						if (files.isEmpty()) {
+							text += "Not a valid litematic file";
 						}
+						else {
+							for (File output : files) {
+								text += "Exported to " + output.getName() + "\n";
+							}
+						}
+					} catch (IOException e) {
+						text += "Could not open this file (IO exception): "+file.getName();
+						e.printStackTrace();
+					} catch (Throwable e) {
+						text += "Could not convert this file: "+file.getName();
+						e.printStackTrace();
 					}
-				} catch (IOException e) {
-					text = "Could not open this file (IO exception)";
-					e.printStackTrace();
-				} catch (Throwable e) {
-					text = "Could not convert this file";
-					e.printStackTrace();
+					textArea.setText(text);
 				}
-				textArea.setText(text);
 			}
 		};
 	}
