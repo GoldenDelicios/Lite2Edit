@@ -3,7 +3,6 @@ package goldendelicios.lite2edit;
 import java.awt.BorderLayout;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 import javax.swing.JButton;
@@ -17,6 +16,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileFilter;
 
 public class Lite2Edit {
+	private static File dir = new File(System.getProperty("user.dir"));
 
 	public static void main(String[] args) {
 		JFrame frame = new JFrame("Lite2Edit");
@@ -25,7 +25,7 @@ public class Lite2Edit {
 		frame.setLocationRelativeTo(null);
 		
 		JPanel panel = new JPanel();
-		JLabel label = new JLabel("Pick a Litematic file or a few");
+		JLabel label = new JLabel("Pick 1 or more Litematic files");
 		
 		JTextArea textArea = new JTextArea(6, 0);
 		textArea.setEditable(false);
@@ -45,34 +45,31 @@ public class Lite2Edit {
 
 	private static ActionListener getBrowseListener(JTextArea textArea, JButton browse) {
 		return event -> {
-			String dir = System.getProperty("user.dir");
 			JFileChooser fc = new JFileChooser(dir);
 			fc.setMultiSelectionEnabled(true);
 			fc.setFileFilter(new LitematicFileFilter());
 			
 			int value = fc.showOpenDialog(browse);
 			if (value == JFileChooser.APPROVE_OPTION) {
-				File[] filez = fc.getSelectedFiles();
+				File[] inputs = fc.getSelectedFiles();
 				String text = "";
-				for (File file: filez)
+				for (File input : inputs)
 				{
 					try {
-						File parent = file.getParentFile();
-						List<File> files = Converter.litematicToWorldEdit(file, parent);
+						File parent = input.getParentFile();
+						dir = parent;
+						List<File> outputs = Converter.litematicToWorldEdit(input, parent);
 						
-						if (files.isEmpty()) {
-							text += "Not a valid litematic file";
+						if (outputs.isEmpty()) {
+							text += input.getName() + " is not a valid litematic file\n";
 						}
 						else {
-							for (File output : files) {
+							for (File output : outputs) {
 								text += "Exported to " + output.getName() + "\n";
 							}
 						}
-					} catch (IOException e) {
-						text += "Could not open this file (IO exception): "+file.getName();
-						e.printStackTrace();
 					} catch (Throwable e) {
-						text += "Could not convert this file: "+file.getName();
+						text += "Error while converting " + input.getName() + ":\n" + e + "\n";
 						e.printStackTrace();
 					}
 					textArea.setText(text);
