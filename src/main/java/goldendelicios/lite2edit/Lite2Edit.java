@@ -3,6 +3,8 @@ package goldendelicios.lite2edit;
 import java.awt.BorderLayout;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintStream;
 import java.util.List;
 
 import javax.swing.JButton;
@@ -19,6 +21,12 @@ public class Lite2Edit {
 	private static File dir = new File(System.getProperty("user.dir"));
 
 	public static void main(String[] args) {
+		try {
+			System.setErr(new PrintStream("errors.log"));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		
 		JFrame frame = new JFrame("Lite2Edit");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setSize(400, 200);
