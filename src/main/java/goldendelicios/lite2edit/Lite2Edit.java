@@ -3,8 +3,10 @@ package goldendelicios.lite2edit;
 import java.awt.BorderLayout;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 
 import javax.swing.JButton;
@@ -19,11 +21,12 @@ import javax.swing.filechooser.FileFilter;
 
 public class Lite2Edit {
 	private static File dir = new File(System.getProperty("user.dir"));
+	private static PrintStream errorFile;
 
 	public static void main(String[] args) {
 		try {
-			System.setErr(new PrintStream("errors.log"));
-		} catch (FileNotFoundException e) {
+			Files.deleteIfExists(Paths.get("errors.log"));
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
@@ -78,12 +81,27 @@ public class Lite2Edit {
 						}
 					} catch (Throwable e) {
 						text += "Error while converting " + input.getName() + ":\n" + e + "\n";
-						e.printStackTrace();
+						handleException(e);
 					}
 					textArea.setText(text);
 				}
 			}
 		};
+	}
+	
+	private static void handleException(Throwable e) {
+		e.printStackTrace();
+		if (errorFile == null) {
+			try {
+				errorFile = new PrintStream("errors.log");
+			} catch (Exception e2) {
+				System.err.println("Failed to write to errors.log");
+				e2.printStackTrace();
+				return;
+			}
+		}
+		e.printStackTrace(errorFile);
+		errorFile.flush();
 	}
 	
 	private static final class LitematicFileFilter extends FileFilter {
