@@ -37,8 +37,7 @@ public class Converter {
 		for (NamedTag regionTag : regions) {
 			CompoundTag region = regionTag.asCompound();
 			ListTag palette = region.get("BlockStatePalette").asList();
-			int bitsPerBlock = palette.size() <= 2 ? 1
-					: (Integer.SIZE - Integer.numberOfLeadingZeros(palette.size() - 1));
+			int bitsPerBlock = Math.max(2, Integer.SIZE - Integer.numberOfLeadingZeros(palette.size() - 1));
 			
 			// Litematica dimensions can be negative.
 			Tag size = region.get("Size");
