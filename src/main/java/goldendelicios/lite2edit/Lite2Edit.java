@@ -8,6 +8,7 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -16,12 +17,14 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileFilter;
 
 public class Lite2Edit {
 	private static File dir = new File(System.getProperty("user.dir"));
 	private static PrintStream errorFile;
+	private static ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1);
 
 	public static void main(String[] args) {
 		try {
@@ -63,28 +66,40 @@ public class Lite2Edit {
 			int value = fc.showOpenDialog(browse);
 			if (value == JFileChooser.APPROVE_OPTION) {
 				File[] inputs = fc.getSelectedFiles();
-				String text = "";
-				for (File input : inputs)
-				{
-					try {
-						File parent = input.getParentFile();
-						dir = parent;
-						List<File> outputs = Converter.litematicToWorldEdit(input, parent);
+				browse.setEnabled(false);
+				scheduler.execute(() -> {
+					StringBuilder s = new StringBuilder();
+					for (int i = 0; i < inputs.length; i++) {
+						String working = "Working... (" + i + "/" + inputs.length + " complete)";
+						SwingUtilities.invokeLater(() -> textArea.setText(working));
 						
-						if (outputs.isEmpty()) {
-							text += input.getName() + " is not a valid litematic file\n";
-						}
-						else {
-							for (File output : outputs) {
-								text += "Exported to " + output.getName() + "\n";
+						long start = System.currentTimeMillis();
+						File input = inputs[i];
+						try {
+							File parent = input.getParentFile();
+							dir = parent;
+							List<File> outputs = Converter.litematicToWorldEdit(input, parent);
+							
+							if (outputs.isEmpty()) {
+								s.append(input.getName() + " is not a valid litematic file\n");
 							}
+							else {
+								for (File output : outputs) {
+									s.append("Exported to " + output.getName() + "\n");
+								}
+							}
+							long time = System.currentTimeMillis() - start;
+							System.out.println("Conversion took " + time + "ms");
+						} catch (Throwable e) {
+							s.append("Error while converting " + input.getName() + ":\n" + e + "\n");
+							handleException(e);
 						}
-					} catch (Throwable e) {
-						text += "Error while converting " + input.getName() + ":\n" + e + "\n";
-						handleException(e);
 					}
-					textArea.setText(text);
-				}
+					SwingUtilities.invokeLater(() -> {
+						textArea.setText(s.toString());
+						browse.setEnabled(true);
+					});
+				});
 			}
 		};
 	}
