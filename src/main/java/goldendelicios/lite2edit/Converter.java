@@ -1,5 +1,6 @@
 package goldendelicios.lite2edit;
 
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -25,6 +26,7 @@ import se.llbit.nbt.StringTag;
 import se.llbit.nbt.Tag;
 
 public class Converter {
+	private static final File tempFile = new File("lite2edit.tmp");
 
 	public static List<File> litematicToWorldEdit(File inputFile, File outputDir) throws IOException {
 		DataInputStream inStream = new DataInputStream(new GZIPInputStream(new FileInputStream(inputFile)));
@@ -51,10 +53,12 @@ public class Converter {
 			int offsety = position.get("y").intValue() + (y < 0 ? y+1 : 0);
 			int offsetz = position.get("z").intValue() + (z < 0 ? z+1 : 0);
 			
+			// convert blocks
+			// use a temporary file to avoid OutOfMemoryErrors for large schematics
+			BufferedWriter writer = Files.newBufferedWriter(tempFile.toPath());
 			int numBlocks = Math.abs(x * y * z);
-			short[] liteBlocks = new short[numBlocks];
 			long bitmask, bits = 0;
-			int i = 0, bitCount = 0;
+			int i = 0, bitCount = 0, weSize = 0;
 			for (long num : region.get("BlockStates").longArray()) {
 				int remainingBits = bitCount + 64;
 				if (bitCount != 0) {
@@ -63,7 +67,8 @@ public class Converter {
 					bits = bits | newBits;
 					num = num >>> (bitsPerBlock - bitCount);
 					remainingBits -= bitsPerBlock;
-					liteBlocks[i++] = (short) bits;
+					weSize += writeBlock(writer, (short) bits);
+					i++;
 				}
 				
 				bitmask = (1 << bitsPerBlock) - 1;
@@ -71,13 +76,15 @@ public class Converter {
 					bits = num & bitmask;
 					num = num >>> bitsPerBlock;
 					remainingBits -= bitsPerBlock;
-					if (i >= liteBlocks.length)
+					if (i >= numBlocks)
 						break;
-					liteBlocks[i++] = (short) bits;
+					weSize += writeBlock(writer, (short) bits);
+					i++;
 				}
 				bits = num;
 				bitCount = remainingBits;
 			}
+			writer.close();
 			
 			i = 0;
 			String[] blockPalette = new String[palette.size()];
@@ -97,22 +104,11 @@ public class Converter {
 			/*
 			 * Convert to WorldEdit format now
 			 */
-			// Convert block data
-			byte[] weBlocks = new byte[liteBlocks.length * 2];
-			i = 0;
-			for (short block : liteBlocks) {
-				if (block >= palette.size())
-					throw new IllegalArgumentException("Something's wrong with the palette");
-				
-				if (block > 127) {
-					weBlocks[i++] = (byte) (block | 128);
-					weBlocks[i++] = (byte) (block / 128);
-				}
-				else {
-					weBlocks[i++] = (byte) block;
-				}
-			}
-			weBlocks = Arrays.copyOf(weBlocks, i);
+			// read block data
+			byte[] weBlocks = new byte[weSize];
+			FileInputStream stream = new FileInputStream(tempFile);
+			stream.read(weBlocks);
+			stream.close();
 			
 			// Convert palette
 			CompoundTag wePalette = new CompoundTag();
@@ -122,6 +118,7 @@ public class Converter {
 			
 			// Copy tile entity data
 			List<CompoundTag> weTileEntities = new ArrayList<>();
+			List<String> skip = Arrays.asList("x", "y", "z", "id");
 			for (SpecificTag tileEntity : region.get("TileEntities").asList()) {
 				CompoundTag liteTileEntity = tileEntity.asCompound();
 				CompoundTag weTileEntity = new CompoundTag();
@@ -138,7 +135,6 @@ public class Converter {
 				String tid = liteTileEntity.get("id").stringValue();
 				weTileEntity.add("Id", new StringTag(tid));
 				
-				List<String> skip = Arrays.asList("x", "y", "z", "id");
 				for (NamedTag tileEntityTag : liteTileEntity) {
 					String name = tileEntityTag.name();
 					if (!skip.contains(name))
@@ -188,7 +184,21 @@ public class Converter {
 			files.add(outputFile);
 		}
 		
+		tempFile.delete();
 		return files;
+	}
+	
+	private static int writeBlock(BufferedWriter writer, short block) throws IOException {
+		int b = block >>> 7;
+		if (b == 0) {
+			writer.write(block);
+			return 1;
+		}
+		else {
+			writer.write(block | 128);
+			writer.write(b);
+			return 2;
+		}
 	}
 
 }
