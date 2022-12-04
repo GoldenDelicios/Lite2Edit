@@ -107,7 +107,12 @@ public class Converter {
 			// read block data
 			byte[] weBlocks = new byte[weSize];
 			FileInputStream stream = new FileInputStream(tempFile);
-			stream.read(weBlocks);
+			int r = stream.read(weBlocks), len = 0;
+			// keep reading if we didn't get the whole file in one go
+			while (r != -1 && len + r != weSize) {
+				len += r;
+				r = stream.read(weBlocks, len, weSize - len);
+			}
 			stream.close();
 			
 			// Convert palette
