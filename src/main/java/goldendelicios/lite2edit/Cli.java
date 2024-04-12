@@ -6,28 +6,32 @@ import java.util.List;
 
 public class Cli {
 
-    private ArrayList<File> files = new ArrayList<>();
-    //all possible arguments
-
     public void cli(String[] args) {
+        ArrayList<File> files = new ArrayList<>();
         System.out.println("----Starting Lite2Edit CLI----");
         if (args.length>1) {
+
+            //Get all files from arguments
             for (String fn: args) {
                 if (!fn.equals("--cli")) {
-                    File file = new File(fn);
-                    if (file.exists()) {
-                        files.add(file);
-                        System.out.println(fn+"ssss");
+                    if (fn.contains(".litematic")) {
+                        File file = new File(fn);
+                        if (file.exists()) {
+                            files.add(file);
+                        }
+                        else{
+                            System.out.println(fn+" doesn't exist!");
+                        }
                     }
-                    System.out.println(fn);
+                    else {
+                        System.out.println(fn+" is not a litematic file!");
+                    }
                 }
             }
 
-            StringBuilder s = new StringBuilder();
-
-
+            //conversion logic
             for (int i = 0; i<files.size(); i++) {
-                String working = "Working... (" + i + "/" + files.size() + " complete)";
+                System.out.println("Working... (" + i + "/" + files.size() + " complete)");
 
                 long start = System.currentTimeMillis();
                 File input = files.get(i);
@@ -37,23 +41,23 @@ public class Cli {
                     List<File> outputs = Converter.litematicToWorldEdit(input, parent);
 
                     if (outputs.isEmpty()) {
-                        s.append(input.getName() + " is not a valid litematic file\n");
+                        System.out.println(input.getName() + " is not a valid litematic file\n");
                     }
                     else {
                         for (File output : outputs) {
-                            s.append("Exported to " + output.getName() + "\n");
+                            System.out.println("Exported to " + output.getName() + "\n");
                         }
                     }
                     long time = System.currentTimeMillis() - start;
                     System.out.println("Conversion took " + time + "ms");
                 } catch (Throwable e) {
-                    s.append("Error while converting " + input.getName() + ":\n" + e + "\n");
+                    System.out.println("Error while converting " + input.getName() + ":\n" + e + "\n");
                     Lite2Edit.handleException(e);
                 }
             }
         }
         else {
-            System.out.println("No valid filepaths found!");
+            System.out.println("No valid file paths found!");
             System.out.println("Correct usage: java -jar Lite2Edit-x.x.x.jar --cli [Path to file 1] [Path to file 2]...");
         }
     }
