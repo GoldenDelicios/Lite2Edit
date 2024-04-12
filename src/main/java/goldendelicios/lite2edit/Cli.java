@@ -6,18 +6,20 @@ import java.util.List;
 
 public class Cli {
 
-    private ArrayList<File> files = new ArrayList<File>();
+    private ArrayList<File> files = new ArrayList<>();
     //all possible arguments
 
     public void cli(String[] args) {
         System.out.println("----Starting Lite2Edit CLI----");
         if (args.length>1) {
-            for (String s: args) {
-                if (!s.equals("--cli")) {
-                    File file = new File(s);
+            for (String fn: args) {
+                if (!fn.equals("--cli")) {
+                    File file = new File(fn);
                     if (file.exists()) {
                         files.add(file);
+                        System.out.println(fn+"ssss");
                     }
+                    System.out.println(fn);
                 }
             }
 
