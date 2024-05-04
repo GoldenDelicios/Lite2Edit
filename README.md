@@ -18,11 +18,11 @@ On successful conversion:
 
 
 ## CLI
-Run the jar file with the --cli argument and add all files you want converted after that.
+Run the jar file with the --convert argument and add all files you want converted after that.
 
 Example:
 ```
-java -jar Lite2Edit-1.2.0.jar --cli test.litematic ../anothertestfile.litematic
+java -jar Lite2Edit-1.2.0.jar --convert test.litematic ../anothertestfile.litematic
 ```
 
 Both relative and full file paths work.
