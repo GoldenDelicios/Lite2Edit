@@ -58,7 +58,7 @@ public class Converter {
 			BufferedOutputStream fout = new BufferedOutputStream(new FileOutputStream(tempFile));
 			int numBlocks = Math.abs(x * y * z);
 			long bitmask, bits = 0;
-			int i = 0, bitCount = 0, weSize = 0;
+			int i = 0, bitCount = 0;
 			for (long num : region.get("BlockStates").longArray()) {
 				int remainingBits = bitCount + 64;
 				if (bitCount != 0) {
@@ -67,7 +67,7 @@ public class Converter {
 					bits = bits | newBits;
 					num = num >>> (bitsPerBlock - bitCount);
 					remainingBits -= bitsPerBlock;
-					weSize += writeBlock(fout, (short) bits);
+					writeBlock(fout, (short) bits);
 					i++;
 				}
 				
@@ -78,12 +78,13 @@ public class Converter {
 					remainingBits -= bitsPerBlock;
 					if (i >= numBlocks)
 						break;
-					weSize += writeBlock(fout, (short) bits);
+					writeBlock(fout, (short) bits);
 					i++;
 				}
 				bits = num;
 				bitCount = remainingBits;
 			}
+			fout.flush();
 			fout.close();
 			
 			i = 0;
@@ -101,19 +102,12 @@ public class Converter {
 				blockPalette[i++] = name;
 			}
 			
-			/*
-			 * Convert to WorldEdit format now
-			 */
+			//
+			// Convert to WorldEdit format now
+			//
+			
 			// read block data
-			byte[] weBlocks = new byte[weSize];
-			FileInputStream stream = new FileInputStream(tempFile);
-			int r = stream.read(weBlocks), len = 0;
-			// keep reading if we didn't get the whole file in one go
-			while (r != -1 && len + r != weSize) {
-				len += r;
-				r = stream.read(weBlocks, len, weSize - len);
-			}
-			stream.close();
+			byte[] weBlocks = Files.readAllBytes(tempFile.toPath());
 			
 			// Convert palette
 			CompoundTag wePalette = new CompoundTag();
@@ -193,16 +187,13 @@ public class Converter {
 		return files;
 	}
 	
-	private static int writeBlock(BufferedOutputStream fout, short block) throws IOException {
-		int b = block >>> 7;
-		if (b == 0) {
-			fout.write(block);
-			return 1;
+	private static void writeBlock(BufferedOutputStream fout, short block) throws IOException {
+		if (block > 127) {
+			fout.write((byte) (block | 128));
+			fout.write((byte) (block / 128));
 		}
 		else {
-			fout.write(block | 128);
-			fout.write(b);
-			return 2;
+			fout.write((byte) block);
 		}
 	}
 
